@@ -1,0 +1,116 @@
+{
+  "schemaVersion": 1,
+  "id": "agent-mtsc6jxd-48fc64c6",
+  "name": "账号信息底部提示",
+  "description": "每次切换账号或 WorkBuddy 页面加载完成后，从窗口底部弹出一次 toast，展示当前账号名称、剩余积分和连续活跃天数；同一次加载只提示一次；积分不限量时显示“不限量”，活跃天数查询失败时显示“暂不可用”。",
+  "enabled": false,
+  "trigger": {
+    "types": [
+      "pageReady",
+      "accountSwitched"
+    ],
+    "oncePerNavigation": true,
+    "type": "manual"
+  },
+  "variables": {},
+  "steps": [
+    {
+      "op": "logic.catch",
+      "steps": [
+        {
+          "op": "account.getCurrent",
+          "saveAs": "current"
+        },
+        {
+          "op": "account.status",
+          "fields": [
+            "credits",
+            "activity.streak"
+          ],
+          "saveAs": "status"
+        }
+      ],
+      "onError": [
+        {
+          "op": "vars.set",
+          "key": "statusError",
+          "value": true
+        }
+      ]
+    },
+    {
+      "op": "logic.if",
+      "condition": {
+        "left": "{{vars.statusError}}",
+        "operator": "truthy"
+      },
+      "then": [
+        {
+          "op": "vars.set",
+          "key": "creditsText",
+          "value": "暂不可用"
+        },
+        {
+          "op": "vars.set",
+          "key": "daysText",
+          "value": "暂不可用"
+        }
+      ],
+      "else": [
+        {
+          "op": "logic.if",
+          "condition": {
+            "left": "{{vars.status.credits.unlimited}}",
+            "operator": "truthy"
+          },
+          "then": [
+            {
+              "op": "vars.set",
+              "key": "creditsText",
+              "value": "不限量"
+            }
+          ],
+          "else": [
+            {
+              "op": "vars.set",
+              "key": "creditsText",
+              "value": "{{vars.status.credits.total}}"
+            }
+          ]
+        },
+        {
+          "op": "logic.if",
+          "condition": {
+            "left": "{{vars.status.activity.streak.days}}",
+            "operator": "falsy"
+          },
+          "then": [
+            {
+              "op": "vars.set",
+              "key": "daysText",
+              "value": "暂不可用"
+            }
+          ],
+          "else": [
+            {
+              "op": "vars.set",
+              "key": "daysText",
+              "value": "{{vars.status.activity.streak.days}}天"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "op": "notify.toast",
+      "level": "info",
+      "message": "账号：{{vars.current.nickname}} ｜ 剩余积分：{{vars.creditsText}} ｜ 连续活跃：{{vars.daysText}}",
+      "duration": 4200
+    }
+  ],
+  "onSuccess": [],
+  "onFailure": [],
+  "schedule": {
+    "type": "manual"
+  }
+}
